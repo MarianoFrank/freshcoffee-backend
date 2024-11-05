@@ -6,6 +6,11 @@ use App\Services\Auth\JwtGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -28,5 +33,14 @@ class AppServiceProvider extends ServiceProvider
             // Aquí obtenemos el Request desde el contenedor de la aplicación.
             return new JwtGuard(Auth::createUserProvider($config['provider']), $app['request']);
         });
+
+        //registro un limitador 
+
+        /* 
+          TODO: Descomentar luego
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+        */
     }
 }

@@ -2,14 +2,15 @@
 
 namespace App\Services\Auth;
 
-use DB;
+
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /*
 *NOTA: Las implementaciondes de "logout_all" y lista negra de token
@@ -60,60 +61,53 @@ class JwtGuard implements Guard
      */
     public function user()
     {
-
-        if (!is_null($this->user)) {
-            return $this->user;
-        }
-
         // Extraer el token del header Authorization
         $token = $this->request->bearerToken();
 
         if (!$token) {
-
-            return [
-                "error" => "No token"
-            ];
+            throw new AuthenticationException('Token not provided');
         }
 
         try {
+
             // Decodificar el JWT
             //el metodo decode ya valida la expiracion
             $credentials = JWT::decode($token, new Key($this->secretKey, 'HS256'));
-            // Obtener el usuario usando el UserProvider
-            $this->user = $this->provider->retrieveById($credentials->sub);
+            // generamos el usuario con el contenido del payload sin ir a la base de datos
+            $this->user = [
+                'id' => $credentials->sub,
+                'email' => $credentials->email,
+            ];
         } catch (ExpiredException $e) {
-            return [
-                "error" => "Expired token"
-            ];
+            throw new AuthenticationException('Token expired');
         } catch (\Exception $e) {
-            return [
-                "error" => "Invalid token"
-            ];
+            throw new AuthenticationException('Invalid token');
         }
 
-
-        if ($this->user && $this->isTokenRevoked($token, auth()->id())) {
-            $this->user = null;
-            return [
-                "error" => "Revoked token"
-            ];
-        }
+        //comprueba si el token esta en la lista negra
+        // if ($this->user && $this->isTokenRevoked($token, auth()->id())) {
+        //     $this->user = null;
+        //     return [
+        //         "error" => "Revoked token"
+        //     ];
+        // }
 
         //comprobamos si cerro sesion en todas sus sesiones actualmente
         //logoutall timestamp del token actual
-        $credentialsTimeLogoutAll = Carbon::createFromTimestamp($credentials->logout_all ?? 0);
-        $userTimeLogoutAll = Carbon::createFromTimestamp($this->user->logout_all ?? 0);
+        // $credentialsTimeLogoutAll = Carbon::createFromTimestamp($credentials->logout_all ?? 0);
+        // $userTimeLogoutAll = Carbon::createFromTimestamp($this->user->logout_all ?? 0);
 
-        if ($credentialsTimeLogoutAll < $userTimeLogoutAll) {
-            $this->user = null;
-            return [
-                "error" => "Invalid token (logoutall)"
-            ];
-        }
-
+        // if ($credentialsTimeLogoutAll < $userTimeLogoutAll) {
+        //     $this->user = null;
+        //     return [
+        //         "error" => "Invalid token (logoutall)"
+        //     ];
+        // }
+        //si todo salio bien retornamos el usuario
         return $this->user;
     }
 
+    /*
     public function isTokenRevoked($token, $user_id)
     {
         if (!is_null($this->user)) {
@@ -128,7 +122,7 @@ class JwtGuard implements Guard
 
         return null;
     }
-
+    */
     /**
      * Obtiene el ID del usuario autenticado.
      */
@@ -150,47 +144,40 @@ class JwtGuard implements Guard
         }
 
         $user = $this->provider->retrieveByCredentials($credentials);
-        if (!$user) {
+        if (is_null($user)) {
             return false;
         }
 
         // Verificar la contraseña
         if ($this->provider->validateCredentials($user, $credentials)) {
-
-            // Preparar los datos para el payload del token
-            $payloadAccesToken = [
+            // Generar el token
+            $token = JWT::encode([
                 'iss' => env(" APP_URL"), // Emisor del token
                 'sub' => $user->id,        // ID del usuario
+                'name' => $user->name,
                 'email' => $user->email,   // Email del usuario
                 'iat' => time(),           // Hora en que fue emitido
-                'exp' => time() + 3600,     // Expira en 1 hora (puedes ajustar esto según tus necesidades)
-                'logout_all' => $user->logout_all
-            ];
+                'exp' => time() + env("JWT_EXPIRED_TIME")
+                //'logout_all' => $user->logout_all
+            ], $this->secretKey, 'HS256');
 
-            // Generar el token
-            $token = JWT::encode($payloadAccesToken, $this->secretKey, 'HS256');
-
+            //Funcion remember me
             if ($this->rememberMe) {
-                $payloadRefreshToken = [
+                $refreshToken = JWT::encode([
                     'iss' => env(" APP_URL"),
                     'sub' => $user->id,
-                    'email' => $user->email,
                     'iat' => time(),
-                    'exp' => time() + 259200, //3 dias de expiracion     
-                    'logout_all' => $user->logout_all
-                ];
-
-                $refreshToken = JWT::encode($payloadRefreshToken, $this->secretRefreshKey, 'HS256');
+                    'exp' => time() + env("JWT_REFRESH_EXPIRED_TIME")
+                ], $this->secretRefreshKey, 'HS256');
             }
 
-
-            // Retornar el token y opcionalmente el refresh_token
             return [
-                "acces_token" => $token,
+                "access_token" => $token,
                 "refresh_token" => $refreshToken ?? null
             ];
         }
-        return null;
+
+        return false;
     }
 
     /**
@@ -205,9 +192,13 @@ class JwtGuard implements Guard
         return !is_null($this->user);
     }
 
-    /**
-     * Agrega el token de acceso y de refresco a la lista negra
+    /*
+    Agrega el token de acceso y de refresco a la lista negra.
+    Para este caso no lo usare porque no creo q tenga sentido para un JWT,
+    ya que solo borrare el token desde el frontend.
      */
+
+    /*
     public function logout()
     {
         $message = [];
@@ -256,8 +247,8 @@ class JwtGuard implements Guard
 
         return $message;
 
-        /*
-        * NOTA: Se podria hacer un demonio cada 24 horas que limpie los token revocados
+        
+         NOTA: Se podria hacer un demonio cada 24 horas que limpie los token revocados
         expirados en la base de datos ya que estamos guardando la expiracion.
         Otra manera seria..., en este mismo metodo logout al momento de agregar
         un token revocado, limpiar los token expirados revocados de este usuario.
@@ -268,9 +259,11 @@ class JwtGuard implements Guard
                     ->where('expire', '<', now())
                     ->delete();
             }
-        */
+        
     }
-
+    */
+    /*
+    Agrega el token a los tokens revocados
     public function revokeToken($token, $credentials, $userId)
     {
         // Obtener la fecha de expiración del payload
@@ -282,7 +275,8 @@ class JwtGuard implements Guard
             'expire' => $expire, // Convierte a formato de fecha
         ]);
     }
-
+*/
+    /* Logica para pedir un refresh token con un access_token */
     public function refreshToken()
     {
         $refreshToken = $this->request->get('Refresh');
@@ -297,7 +291,7 @@ class JwtGuard implements Guard
             $credentials = JWT::decode($refreshToken, new Key($this->secretRefreshKey, 'HS256'));
         } catch (ExpiredException $e) {
             return [
-                "error" => "Expired token"
+                "error" => "Expired refresh token"
             ];
         } catch (\Exception $e) {
             return [
@@ -305,21 +299,21 @@ class JwtGuard implements Guard
             ];
         }
 
-        if ($this->isTokenRevoked($refreshToken, $credentials->sub)) {
-            return [
-                "error" => "Revoked token"
-            ];
-        }
+        // if ($this->isTokenRevoked($refreshToken, $credentials->sub)) {
+        //     return [
+        //         "error" => "Revoked token"
+        //     ];
+        // }
 
-        $credentialsTimeLogoutAll = Carbon::createFromTimestamp($credentials->logout_all ?? 0);
-        $userTimeLogoutAll = Carbon::createFromTimestamp($this->user->logout_all ?? 0);
+        // $credentialsTimeLogoutAll = Carbon::createFromTimestamp($credentials->logout_all ?? 0);
+        // $userTimeLogoutAll = Carbon::createFromTimestamp($this->user->logout_all ?? 0);
 
-        if ($credentialsTimeLogoutAll < $userTimeLogoutAll) {
-            $this->user = null;
-            return [
-                "error" => "Invalid token (logoutall)"
-            ];
-        }
+        // if ($credentialsTimeLogoutAll < $userTimeLogoutAll) {
+        //     $this->user = null;
+        //     return [
+        //         "error" => "Invalid token (logoutall)"
+        //     ];
+        // }
 
         //Si llego hasta aca el refresh token es valido
 
@@ -329,19 +323,25 @@ class JwtGuard implements Guard
             return ["error" => "No user"];
         }
 
-        $newPayload = [
+        $newAccesToken = JWT::encode([
             'iss' => env(" APP_URL"), // Emisor del token
             'sub' => $user->id,        // ID del usuario
+            'name' => $user->name,
             'email' => $user->email,   // Email del usuario
             'iat' => time(),           // Hora en que fue emitido
-            'exp' => time() + 3600,     // Expira en 1 hora (puedes ajustar esto según tus necesidades)
-            'logout_all' => $user->logout_all
-        ];
+            'exp' => time() + env("JWT_EXPIRED_TIME")
+            //'logout_all' => $user->logout_all
+        ], $this->secretKey, 'HS256');
 
-        $newToken = JWT::encode($newPayload, $this->secretKey, 'HS256');
 
-        return ["acces_token" => $newToken];
+        return ["access_token" => $newAccesToken];
 
+        /*
+        NOTA: en este caso no estoy emitieno un refresh token al momento de usar el refresh_token
+        porque no lo considero necesario para el tipo de aplicacion, sin embargo si yo emitira el
+        refres_token podria darse el caso que el usuario este logeado por ej. todo el año, lo cual
+        no creo corrrecto porque hay mas propbabilidad que alguien tenga acceso a su pc.
+
+        */
     }
-
 }
