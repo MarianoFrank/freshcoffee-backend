@@ -17,7 +17,14 @@ class AuthController extends Controller
       $credentials = ["email" => $validated['email'], "password" => $validated['password']];
 
       if (!$validationData = auth()->validate($credentials)) {
-         return response()->json(['error' => 'Incorrect credentials'], 422);
+         return response()->json(
+            [
+               'message' => 'Incorrect credentials',
+               'errors' => ['credentials' => 'The provided credentials are incorrect.'],
+               'type' => 'credentials'
+            ],
+            422
+         );
       }
       //contiene los tokens
       return $validationData;
