@@ -130,7 +130,7 @@ class JwtGuard implements Guard
     {
         $user = $this->user();
 
-        return $user ? $user->getAuthIdentifier() : null;
+        return $user ? $user["id"] : null;
     }
 
     /**
@@ -156,6 +156,7 @@ class JwtGuard implements Guard
                 'sub' => $user->id,        // ID del usuario
                 'name' => $user->name,
                 'email' => $user->email,   // Email del usuario
+                'admin' => $user->admin,
                 'iat' => time(),           // Hora en que fue emitido
                 'exp' => time() + env("JWT_EXPIRED_TIME")
                 //'logout_all' => $user->logout_all

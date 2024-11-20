@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Product extends Model
+class Order extends Model
 {
     use HasFactory;
 
-    public function Orders(): BelongsToMany
+    public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Order::class)
+        return $this->belongsToMany(Product::class)
             ->as("order_product")
             ->withPivot('quantity')
             ->withTimestamps();

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,7 @@ Route::middleware('auth:jwt')->group(function () {
     Route::apiResources([
         'categories' => CategoryController::class,
         'products' => ProductController::class,
+        'orders' => OrderController::class
     ]);
 });
 
