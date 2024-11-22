@@ -2,7 +2,7 @@
 
 namespace App\Services\Auth;
 
-
+use App\Models\User;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -74,10 +74,12 @@ class JwtGuard implements Guard
             //el metodo decode ya valida la expiracion
             $credentials = JWT::decode($token, new Key($this->secretKey, 'HS256'));
             // generamos el usuario con el contenido del payload sin ir a la base de datos
-            $this->user = [
-                'id' => $credentials->sub,
-                'email' => $credentials->email,
-            ];
+            $user = new User();
+            $user->id = $credentials->sub;
+            $user->name = $credentials->name;
+            $user->email = $credentials->email;
+            $user->admin = $credentials->admin;
+            $this->user = $user;
         } catch (ExpiredException $e) {
             throw new AuthenticationException('Token expired');
         } catch (\Exception $e) {
@@ -158,7 +160,7 @@ class JwtGuard implements Guard
                 'email' => $user->email,   // Email del usuario
                 'admin' => $user->admin,
                 'iat' => time(),           // Hora en que fue emitido
-                'exp' => time() + env("JWT_EXPIRED_TIME")
+                'exp' => time() + env("JWT_EXPIRED_TIME", 86400)
                 //'logout_all' => $user->logout_all
             ], $this->secretKey, 'HS256');
 

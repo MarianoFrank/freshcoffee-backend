@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NewOrder;
+use App\Http\Resources\OrderCollection;
 use App\Models\Order;
 use Illuminate\Http\Request;
 
@@ -12,7 +14,7 @@ class OrderController
      */
     public function index()
     {
-        //
+        return new OrderCollection(Order::where("state", 0)->with('products:id,name,category_id')->with('user:id,name')->get()); //estado 0 pendiente
     }
 
     /**
@@ -34,6 +36,9 @@ class OrderController
             foreach ($products as $product) {
                 $order->products()->attach($product['id'], ['quantity' => $product['quantity']]);
             }
+
+            //emitir evento (trasmitir a todos los usuarios conectados al canal, excepto al que lo envia)
+            event(new NewOrder($order->with("products:id,name,category_id")->with("user:id,name")->find($order->id)));
 
             return [
                 "message" => "Order added successfully, it will be ready in a few minutes",
@@ -62,7 +67,21 @@ class OrderController
      */
     public function update(Request $request, Order $order)
     {
-        //
+        try {
+            $order->state = 1; //estado 1 completado
+            $order->save();
+            return [
+                "message" => "Order completed successfully",
+                "order" => $order->id
+            ];
+        } catch (\Throwable $th) {
+            return response()->json(
+                [
+                    'error' =>  "An error has occurred, please try again in a few moments",
+                ],
+                500
+            );
+        }
     }
 
     /**

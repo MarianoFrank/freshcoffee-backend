@@ -19,9 +19,9 @@ class ProductController extends Controller
         // Iniciar la consulta base
         $query = Product::query();
 
-        // Filtrar por disponibilidad si se proporciona el parámetro 'available'
-        if (!is_null($request->query('available'))) {
-            $query->where('available', NumberHelper::toBoolean($request->query('available')));
+        if (!auth()->user()->admin) {
+            //si no es admin solo traemos los disponibles, al admin se le mostrarán todos
+            $query->where('available', true);
         }
 
         // Filtrar por categoría si se proporciona el parámetro 'category_id'
@@ -31,8 +31,8 @@ class ProductController extends Controller
                 $query->where('category_id', $categoryId);
             }
         }
-        // Devolver la colección de productos paginada
-        return new ProductCollection($query->paginate(env('RESOURCES_PER_PAGE', 10)));
+
+        return new ProductCollection($query->get());
     }
 
 
@@ -56,9 +56,26 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Product $product)
     {
-        //
+        try {
+            $product->available = $request->available;
+            $product->save();
+            return response()->json(
+                [
+                    'message' => 'Product updated successfully',
+                    'product' => $product->id
+                ],
+                200
+            );
+        } catch (\Throwable $th) {
+            return response()->json(
+                [
+                    'error' =>  "An error has occurred, please try again in a few moments",
+                ],
+                500
+            );
+        }
     }
 
     /**

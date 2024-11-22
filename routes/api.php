@@ -29,4 +29,8 @@ Route::middleware('auth:jwt')->group(function () {
 Route::post("/register", [AuthController::class, "register"])->name('register');
 Route::post("/login", [AuthController::class, "login"])->name('login');
 Route::post('/refresh/token', [AuthController::class, "refreshToken"])->name('refresh-token');
+
+//reset pass
+Route::post('/forgot-password', [AuthController::class, "forgotPassword"]);
+Route::post('/reset-password', [AuthController::class, "resetPassword"]);
 //});
