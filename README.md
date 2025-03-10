@@ -59,12 +59,14 @@ En dos terminales separadas, inicia los siguientes servicios:
 #### Iniciar el servidor de eventos de Laravel:
 
 ```bash
+#solo para depurar los eventos lanzados
 ./vendor/bin/sail artisan event:listen
 ```
 
 #### Iniciar el sistema de colas:
 
 ```bash
+#para procesar los eventos y el broadcasting
 ./vendor/bin/sail artisan queue:work
 ```
 
