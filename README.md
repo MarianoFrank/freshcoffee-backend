@@ -3,6 +3,8 @@
 
 Este es el backend del proyecto desarrollado con Laravel, diseñado para correr en un entorno Docker con Laravel Sail. Sigue los pasos a continuación para configurar el entorno y comenzar.
 
+Aqui puede encontrar el FRONTEND hecho en REACT ⚛️: https://github.com/MarianoFrank/freshcoffee-frontend
+
 ## Requisitos previos
 
 - Tener Docker y Docker Compose instalados en tu sistema.
