@@ -59,14 +59,14 @@ En dos terminales separadas, inicia los siguientes servicios:
 #### Iniciar el servidor de broadcasting:
 
 ```bash
-#solo para depurar los eventos lanzados
+#inicia el servidor webSocker de Laravel, llamado reverb
 ./vendor/bin/sail artisan reverb:start  
 ```
 
 #### Iniciar el sistema de colas:
 
 ```bash
-#para procesar los eventos y para el broadcasting
+#para procesar los eventos y el broadcasting
 ./vendor/bin/sail artisan queue:work
 ```
 
