@@ -56,17 +56,17 @@ Ejecuta Laravel Sail para levantar el entorno:
 
 En dos terminales separadas, inicia los siguientes servicios:
 
-#### Iniciar el servidor de eventos de Laravel:
+#### Iniciar el servidor de broadcasting:
 
 ```bash
 #solo para depurar los eventos lanzados
-./vendor/bin/sail artisan event:listen
+./vendor/bin/sail artisan reverb:start  
 ```
 
 #### Iniciar el sistema de colas:
 
 ```bash
-#para procesar los eventos y el broadcasting
+#para procesar los eventos y para el broadcasting
 ./vendor/bin/sail artisan queue:work
 ```
 
