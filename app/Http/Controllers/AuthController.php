@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Auth\Events\Registered;
+use Firebase\JWT\JWT;
 
 class AuthController extends Controller
 {
@@ -42,12 +44,29 @@ class AuthController extends Controller
       $user = User::create([
          "name" => $validated["name"],
          "email" => $validated["email"],
+         "admin" => 0,
          "password" => bcrypt($validated["password"]),
       ]);
 
-      return [
-         'user' => $user
-      ];
+      event(new Registered($user)); //enviar email de verificación
+
+      //Esto no lo voy a hacer, ya que no podria validar el email desde otro dispositivo
+      // // Inicia sesion automaticamente, pero debe validar la cuenta
+      // $token = JWT::encode([
+      //    'iss' => env(" APP_URL"), // Emisor del token
+      //    'sub' => $user->id,        // ID del usuario
+      //    'name' => $user->name,
+      //    'email' => $user->email,   // Email del usuario
+      //    'admin' => $user->admin,
+      //    'iat' => time(),           // Hora en que fue emitido
+      //    'exp' => time() + env("JWT_EXPIRED_TIME", 86400)
+      //    //'logout_all' => $user->logout_all
+      // ], env('JWT_SECRET', ''), 'HS256');
+
+      return response()->json([
+         'user' => $user,
+         //'access_token' => $token
+      ]);
    }
 
    public function refreshToken()

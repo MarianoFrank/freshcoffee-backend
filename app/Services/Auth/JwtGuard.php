@@ -74,12 +74,7 @@ class JwtGuard implements Guard
             //el metodo decode ya valida la expiracion
             $credentials = JWT::decode($token, new Key($this->secretKey, 'HS256'));
             // generamos el usuario con el contenido del payload sin ir a la base de datos
-            $user = new User();
-            $user->id = $credentials->sub;
-            $user->name = $credentials->name;
-            $user->email = $credentials->email;
-            $user->admin = $credentials->admin;
-            $this->user = $user;
+            $this->user = User::find($credentials->sub);
         } catch (ExpiredException $e) {
             throw new AuthenticationException('Token expired');
         } catch (\Exception $e) {

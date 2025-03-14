@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class RegisterRequest extends FormRequest
 {
@@ -27,5 +29,14 @@ class RegisterRequest extends FormRequest
             "email" => "required|email|max:30|unique:users",
             "password" => ['required', 'confirmed', Password::min(6)]
         ];
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        // Solo agregamos el campo "type" en los errores de validación
+        throw new HttpResponseException(response()->json([
+            'type' => 'fields',
+            'errors' => $validator->errors(),
+        ], 422));
     }
 }

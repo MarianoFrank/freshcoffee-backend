@@ -11,17 +11,18 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NewOrder implements ShouldBroadcast
+class OrderComplete implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.
      */
-    // lo que reciba en el constructor es lo que se va a transmitir al frontend
     public function __construct(
         public Order $order,
-    ) {}
+    ) {
+        //
+    }
 
     /**
      * Get the channels the event should broadcast on.
@@ -34,6 +35,6 @@ class NewOrder implements ShouldBroadcast
     }
     public function broadcastAs()
     {
-        return 'NewOrder';
+        return 'OrderCompleted';
     }
 }
